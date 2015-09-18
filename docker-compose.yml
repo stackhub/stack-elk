@@ -1,18 +1,32 @@
-# Maintained by StackEngine
 elasticsearch:
-  # The elasticsearch image works well for this.
-  image: elasticsearch:latest
+  image: karthequian/elasticsearch:latest
   ports:
     - "9200:9200"
 logstash:
   image: stackhub/logstash:latest
+  environment:
+    LOGSPOUT: ignore 
+  #command: logstash -f /etc/logstash/conf.d/logstash.conf
+  #volumes:
+  #  - ./logstash/config:/etc/logstash/conf.d
   ports:
     - "5000:5000"
   links:
     - elasticsearch
 kibana:
+  #build: kibana/
   image: stackhub/kibana:latest
+  #volumes:
+  #  - ./kibana/config/kibana.yml:/opt/kibana/config/kibana.yml
   ports:
     - "5601:5601"
   links:
     - elasticsearch
+logspout:
+  net: container:logstash
+  image: nathanleclaire/logspout:43d2b4f914a192d0de221cb744dab665b07f1268
+  environment:
+    DEBUG: true
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  command: syslog://localhost:5000
