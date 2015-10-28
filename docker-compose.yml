@@ -1,30 +1,29 @@
 elasticsearch:
-  image: karthequian/elasticsearch:latest
+  image: "elasticsearch:1.7.3"
   ports:
     - "9200:9200"
+    - "9300:9300"
 logstash:
-  image: stackhub/logstash:latest
-  environment:
-    LOGSPOUT: ignore 
-  #command: logstash -f /etc/logstash/conf.d/logstash.conf
-  #volumes:
-  #  - ./logstash/config:/etc/logstash/conf.d
+  image: "stackhub/logstash:latest"
   ports:
     - "5000:5000"
+    - "5000:5000/udp"
+  environment:
+    # otherwise logstash will keep sending its own logs to itself over and
+    # over... not fun
+    LOGSPOUT: ignore
+  command: -f /etc/logstash.sample.conf
   links:
-    - elasticsearch
+    - elasticsearch:elasticsearch
 kibana:
-  #build: kibana/
   image: stackhub/kibana:latest
-  #volumes:
-  #  - ./kibana/config/kibana.yml:/opt/kibana/config/kibana.yml
   ports:
     - "5601:5601"
   links:
     - elasticsearch
 logspout:
+  image: "stackhub/logspout:latest"
   net: container:logstash
-  image: nathanleclaire/logspout:43d2b4f914a192d0de221cb744dab665b07f1268
   environment:
     DEBUG: true
   volumes:
