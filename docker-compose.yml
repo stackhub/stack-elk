@@ -1,31 +1,38 @@
 elasticsearch:
   image: "elasticsearch:1.7.3"
   ports:
-    - "9200:9200"
-    - "9300:9300"
+    - "9200:9200/tcp"
+    - "9300:9300/tcp"
+  environment:
+    - "stackengine:availability=per-pool"
 logstash:
   image: "stackhub/logstash:latest"
   ports:
-    - "5000:5000"
+    - "5000:5000/tcp"
     - "5000:5000/udp"
   environment:
-    # otherwise logstash will keep sending its own logs to itself over and
-    # over... not fun
-    LOGSPOUT: ignore
-  command: -f /etc/logstash.sample.conf
+    - LOGSPOUT=ignore
+    - "stackengine:availability=per-pool"
+  command: "-f /etc/logstash.sample.conf"
   links:
-    - elasticsearch:elasticsearch
+    - "elasticsearch:elasticsearch"
 kibana:
-  image: stackhub/kibana:latest
+  image: "stackhub/kibana:latest"
   ports:
-    - "5601:5601"
+    - "5601:5601/tcp"
   links:
     - elasticsearch
+  environment:
+    - "stackengine:availability=per-pool"
 logspout:
   image: "stackhub/logspout:latest"
-  net: container:logstash
   environment:
-    DEBUG: true
+    - DEBUG=true
+    - "STACKENGINE_API_TOKEN={{api_token}}"
+    - "STACKENGINE_SERVICE_DISCOVERY_KEY={{sd_deployment_containers_path \"logstash\" 5000}}"
+    - "STACKENGINE_LEADER_IP={{kv_get \"stackengine/mesh/leader_ip\"}}"
+    - "STACKENGINE_LOGSTASH_KEY={{sd_deployment_containers_path \"logstash\" 5000}}"
+    - "stackengine:availability=per-host"
   volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  command: syslog://localhost:5000
+    - "/var/run/docker.sock:/var/run/docker.sock"
+  entrypoint: /bin/runner.sh
